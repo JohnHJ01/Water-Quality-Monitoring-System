@@ -1,0 +1,14 @@
+A7Client	KEYWORD1
+
+checkResponse	KEYWORD2
+
+connect 	KEYWORD2
+write		KEYWORD2
+writeSerial		KEYWORD2
+available	KEYWORD2
+read		KEYWORD2
+peek		KEYWORD2
+flush		KEYWORD2
+stop		KEYWORD2
+connected	KEYWORD2
+
