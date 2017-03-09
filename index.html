@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="Sensors_data.css">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <title>Water Quality Monitoring System</title>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDbVtKFtxBYzlT_OrroPRDuoHc_JSvneoA">
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="infobubble.js"></script>
+    <script>
+        google.charts.load('current', {
+            'packages': ['corechart']
+        });
+        var map;
+        var markers = [];
+        var infoWindow;
+        var locationSelect;
+
+        function load() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: new google.maps.LatLng(5.1492, 100.491)
+                , zoom: 18
+                , mapTypeId: 'hybrid'
+                , mapTypeControlOptions: {
+                    style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
+                }
+            });
+            showData();
+        }
+
+        function showData() {
+            var searchUrl = 'phpsqlsearch.php';
+            downloadUrl(searchUrl, function (data) {
+                var xml = parseXml(data);
+                var markerNodes = xml.documentElement.getElementsByTagName("marker");
+                var bounds = new google.maps.LatLngBounds();
+                for (var i = 0; i < markerNodes.length; i++) {
+                    var time = markerNodes[i].getAttribute("time");
+                    var temperature = markerNodes[i].getAttribute("temperature");
+                    var o2level = markerNodes[i].getAttribute("o2level");
+                    var pH = markerNodes[i].getAttribute("pH");
+                    var turbidity = markerNodes[i].getAttribute("turbidity");
+                    var latlng = new google.maps.LatLng(parseFloat(markerNodes[i].getAttribute("lat")), parseFloat(markerNodes[i].getAttribute("lng")));
+                    //Creating a table to pass into Google Map Infowindow
+                    var table = "<table id=\"data\"> <tr><th scope=\"row\">Temperature</th>";
+                    table += "<td>" + temperature + "</td></tr>";
+                    table += "<tr><th scope=\"row\">O2 Level</th>";
+                    table += "<td>" + o2level + "</td></tr>";
+                    table += "<tr><th scope=\"row\">pH</th>";
+                    table += "<td>" + pH + "</td></tr>";
+                    table += "<tr><th scope=\"row\">Turbidity</th>";
+                    table += "<td>" + turbidity + "</td></tr>";
+                    table += "</table>";
+                    var htmlTable = "<h2>" + time + "</h2><hr>" + table;
+                    createMarker(latlng, htmlTable);
+                    bounds.extend(latlng);
+                }
+                map.fitBounds(bounds);
+            });
+        }
+
+        function createMarker(latlng, htmlTable) {
+            var marker = new google.maps.Marker({
+                map: map
+                , position: latlng
+            });
+            var infoBubble = new InfoBubble({
+                borderRadius: 4
+                , maxWidth: 600
+            });
+
+//            var lat = latlng.lat();
+//            var lng = latlng.lng();
+//            var jsonData = $.ajax({ //get data of all the points in JSON using AJAX
+//                url: "getDataJSON.php?" + "lat=" + lat + "&lng=" + lng
+//                , dataType: "json"
+//                , async: false
+//            }).responseText;
+//            console.log(jsonData);
+//            var parsedJSON = JSON.parse(jsonData);
+//
+//            var typeEnum={
+//                Time        : 0,
+//                Temperature : 1,
+//                pH          : 2,
+//                DO          : 3,
+//                Turbidity   : 4
+//            };
+//
+//            function getMeasurement(item, x, y){ // x-axis: Date and y-axis: The measurement
+//                var measurement = {};
+//                measurement.cols = [item.cols[x], item.cols[y]];
+//                measurement.rows = []; //rows and cols are arrays of multiple objects
+//                for (var counter = 0; counter<item.rows.length; counter++){
+//                    measurement.rows.push({c : []});
+//                    measurement.rows[counter].c = [item.rows[counter].c[x], item.rows[counter].c[y]];
+////                    measurement.rows.push({ "c": [item.rows[counter].c[x], item.rows[counter].c[y]]});
+//                }
+//                return measurement;
+//            }
+//
+//            var jsonTemperature = JSON.stringify(getMeasurement(
+//                parsedJSON,
+//                typeEnum.Time,
+//                typeEnum.Temperature));
+////            var jsonTemperature = getMeasurement(parsedJSON, typeEnum.Time, typeEnum.Temperature);
+////            console.log(jsonTemperature); //print out the JSON data
+//
+//            var jsonPH = JSON.stringify(getMeasurement(
+//                parsedJSON,
+//                typeEnum.Time,
+//                typeEnum.pH));
+//            var jsonDO = JSON.stringify(getMeasurement(
+//                parsedJSON,
+//                typeEnum.Time,
+//                typeEnum.DO));
+//            var jsonTurbidity = JSON.stringify(getMeasurement(
+//                parsedJSON,
+//                typeEnum.Time,
+//                typeEnum.Turbidity));
+//
+//            var contentStringTemperature = drawChart(marker, jsonTemperature);
+//            var contentStringpH = drawChart(marker, jsonPH);
+//            var contentStringDO = drawChart(marker, jsonDO);
+//            var contentStringTurbidity = drawChart(marker, jsonTurbidity);
+
+            infoBubble.addTab('Latest', htmlTable);
+//            infoBubble.addTab('Temperature', contentStringTemperature);
+//            infoBubble.addTab('pH', contentStringpH);
+//            infoBubble.addTab('Dissolved Oxygen Level', contentStringDO);
+//            infoBubble.addTab('Turbidity', contentStringTurbidity);
+
+            google.maps.event.addListener(marker, 'click', function () {
+                var lat = marker.position.lat();
+                var lng = marker.position.lng();
+                var jsonData = $.ajax({ //get data of all the points in JSON using AJAX
+                    url: "getDataJSON.php?" + "lat=" + lat + "&lng=" + lng
+                    , dataType: "json"
+                    , async: false
+                }).responseText;
+                console.log(jsonData);
+                var parsedJSON = JSON.parse(jsonData);
+
+                var typeEnum={
+                    Time        : 0,
+                    Temperature : 1,
+                    pH          : 2,
+                    DO          : 3,
+                    Turbidity   : 4
+                };
+
+                function getMeasurement(item, x, y){ // x-axis: Date and y-axis: The measurement
+                    var measurement = {};
+                    measurement.cols = [item.cols[x], item.cols[y]];
+                    measurement.rows = []; //rows and cols are arrays of multiple objects
+                    for (var counter = 0; counter<item.rows.length; counter++){
+                        measurement.rows.push({c : []});
+                        measurement.rows[counter].c = [item.rows[counter].c[x], item.rows[counter].c[y]];
+    //                    measurement.rows.push({ "c": [item.rows[counter].c[x], item.rows[counter].c[y]]});
+                    }
+                    return measurement;
+                }
+
+                var jsonTemperature = JSON.stringify(getMeasurement(
+                    parsedJSON,
+                    typeEnum.Time,
+                    typeEnum.Temperature));
+    //            var jsonTemperature = getMeasurement(parsedJSON, typeEnum.Time, typeEnum.Temperature);
+    //            console.log(jsonTemperature); //print out the JSON data
+
+                var jsonPH = JSON.stringify(getMeasurement(
+                    parsedJSON,
+                    typeEnum.Time,
+                    typeEnum.pH));
+                var jsonDO = JSON.stringify(getMeasurement(
+                    parsedJSON,
+                    typeEnum.Time,
+                    typeEnum.DO));
+                var jsonTurbidity = JSON.stringify(getMeasurement(
+                    parsedJSON,
+                    typeEnum.Time,
+                    typeEnum.Turbidity));
+
+                var contentStringTemperature = drawChart(marker, jsonTemperature);
+                var contentStringpH = drawChart(marker, jsonPH);
+                var contentStringDO = drawChart(marker, jsonDO);
+                var contentStringTurbidity = drawChart(marker, jsonTurbidity);
+                
+                infoBubble.addTab('Temperature', contentStringTemperature);
+                infoBubble.addTab('pH', contentStringpH);
+                infoBubble.addTab('Dissolved Oxygen Level', contentStringDO);
+                infoBubble.addTab('Turbidity', contentStringTurbidity);
+                infoBubble.open(map, marker);
+                
+            });
+            markers.push(marker);
+        }
+
+        function drawChart(marker, jsonMeasurement) {
+            var lat = marker.getPosition().lat();
+            var lng = marker.getPosition().lng();
+
+            // Create the data table.
+            var data = new google.visualization.DataTable(jsonMeasurement);
+            var node = document.createElement('div')
+                , chart = new google.visualization.LineChart(node);
+            chart.draw(data, {
+                width: 440,
+                height: 240,
+                pointSize: 3,
+                explorer: { 
+//                    actions: ['dragToZoom', 'rightClickToReset'],
+                    axis: 'horizontal',
+                    keepInBounds: true,
+                    maxZoomIn: 0.01
+                }
+            });
+            return node;
+        }
+
+        function downloadUrl(url, callback) {
+            var request = window.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') : new XMLHttpRequest;
+            request.onreadystatechange = function () {
+                if (request.readyState == 4) {
+                    request.onreadystatechange = doNothing();
+                    callback(request.responseText, request.status);
+                }
+            };
+            request.open('GET', url, true);
+            request.send(null);
+        }
+
+        function parseXml(str) {
+            if (window.ActiveXObject) {
+                var doc = new ActiveXObject('Microsoft.XMLDOM');
+                doc.loadXML(str);
+                return doc;
+            }
+            else if (window.DOMParser) {
+                return (new DOMParser).parseFromString(str, 'text/xml');
+            }
+        }
+
+        function doNothing() {}
+    </script>
+</head>
+
+<body onload="load()">
+    <div id="map"></div>
+</body>
+
+</html>
